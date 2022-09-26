@@ -133,4 +133,6 @@ for i in range(len(results_sum)):
 
 plt.xlabel("Tuning parameter * g")
 plt.ylabel("Number of iterations")
+plt.savefig("tuning_param.png")
 plt.show()
+
