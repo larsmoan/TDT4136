@@ -237,6 +237,8 @@ class Map_Obj():
             str_value = ' # '
         elif value == 7:
             str_value = ' S '
+        elif value == 8:
+            str_value = ' X '
         else:
             str_value = str(value)
         self.int_map[pos[0]][pos[1]] = value
@@ -348,7 +350,8 @@ class Map_Obj():
             ' ; ': (36, 36, 36),   # blackish
             ' S ': (255, 0, 255),  # magenta
             ' G ': (0, 128, 255),   # cyan
-            ' Green ': (0, 255, 0)  # green
+            ' Green ': (0, 255, 0),  # green
+            ' X ': (150, 150, 0)  # Yellow
         }
         # Go through image and set pixel color for every position
         for y in range(height):
@@ -366,11 +369,16 @@ class Map_Obj():
 
         return image
 
-    def update_image(self):
+    def update_image(self, save = False):
         npimage = np.array(self.show_map())
         cv2.imshow('image', npimage)
-        #Wait for a button press
-        while cv2.waitKey(1) == -1:
+        if save:
+            cv2.imwrite('image.png', npimage)
+
+        while cv2.waitKey(33) != 27:
             pass
+        cv2.destroyAllWindows()
+
+
     
 
