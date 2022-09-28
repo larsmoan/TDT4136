@@ -90,7 +90,7 @@ def aStar(task, tuning_param):
             print("Solution has been found! \n")
             #Higlight the starting point as green
             map.replace_map_values(map.get_start_pos(), 5, map.get_goal_pos())
-            #map.update_image(True)
+            map.update_image(True)
             return path[::-1] , num_iter
         
         neighbour_nodes = get_neighbours(current_node)
@@ -137,6 +137,8 @@ def tuning():
     plt.ylabel("Number of iterations")
     plt.savefig("tuning_param.png")
     plt.show()
-tuning()
+
+
 if __name__ == "__main__":
-    aStar(1, 1)
+    for i in range(1,5):
+        aStar(i, 1)
