@@ -12,9 +12,12 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+from pickle import FALSE
+from unittest import BaseTestSuite
 from util import manhattanDistance
 from game import Directions
 import random, util
+import math
 
 from game import Agent
 
@@ -70,11 +73,47 @@ class ReflexAgent(Agent):
         successorGameState = currentGameState.generatePacmanSuccessor(action)
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
+        currentFood = currentGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        if successorGameState.isLose():
+            return -math.inf
+        elif successorGameState.isWin():
+            return math.inf
+        
+        
+        #Distance to closest active ghost
+        activeGhosts = []
+        scaredGhosts = []
+        for ghost in newGhostStates:
+            if ghost.scaredTimer > 0:
+                scaredGhosts.append(ghost)
+            else:
+                activeGhosts.append(ghost)
+
+        #Sorting both lists of ghost from closest to the pacman,  based on the ghost.getPosition()
+        activeGhosts.sort(key=lambda x: manhattanDistance(newPos, x.getPosition()))
+        scaredGhosts.sort(key=lambda x: manhattanDistance(newPos, x.getPosition()))
+       
+        #Closest ghost 
+
+        #Here there is a lot more to do, but currently i dont have the time
+        #The idea is to eat the scared ghosts if doable, instead just avoid all ghost that are closer to the pacman than 3 tiles if not if 
+        # ignore it
+        if len(activeGhosts) > 0:
+            if manhattanDistance(newPos, activeGhosts[0].getPosition()) < 2:
+                return -math.inf
+        
+        #Distance to closest food
+        foodList = currentFood.asList()
+        foodList.sort(key=lambda x: manhattanDistance(newPos, x))
+        if len(foodList) > 0:
+            foodDistance = manhattanDistance(newPos, foodList[0])
+        
+        evaluation = successorGameState.getScore()/200 - foodDistance
+        return evaluation
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -109,7 +148,7 @@ class MultiAgentSearchAgent(Agent):
 class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 2)
-    """
+    """   
 
     def getAction(self, gameState):
         """
@@ -135,7 +174,56 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def maxagent(gameState, depth):
+            if gameState.isWin() or gameState.isLose():
+                return self.evaluationFunction(gameState)
+            
+            bestAction = Directions.STOP
+            score = -100000
+        
+            for action in gameState.getLegalActions(0):
+                succesor = gameState.generateSuccessor(0, action)
+
+                tmp_score = minagent(succesor, 1, depth)
+                if tmp_score > score:
+                    score = tmp_score
+                    bestAction = action
+
+            if depth == 0:
+                return bestAction
+            else:
+                return score
+
+        #Opposition
+        def minagent(gameState, agent, depth):
+            if gameState.isWin() or gameState.isLose():
+                return self.evaluationFunction(gameState)
+
+            next_agent = agent + 1
+            num_ghosts = gameState.getNumAgents() - 1
+            if agent == num_ghosts:
+                #The next agent should be the pacman
+                next_agent = 0
+            score = 100000
+   
+            for action in gameState.getLegalActions(agent):
+                if next_agent == 0:
+                    if depth == self.depth - 1: #This means that ??
+                        succesor = gameState.generateSuccessor(agent, action)
+                        tmp_score = self.evaluationFunction(succesor)
+                    else:
+                        succesor = gameState.generateSuccessor(agent, action)
+                        tmp_score = maxagent(succesor, depth + 1)
+
+                else: #There is another ghost we need to account for
+                    succesor = gameState.generateSuccessor(agent, action)
+                    tmp_score = minagent(succesor, next_agent, depth)
+
+                if tmp_score < score:
+                    score = tmp_score
+            return score
+        return maxagent(gameState, 0)
+        
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
