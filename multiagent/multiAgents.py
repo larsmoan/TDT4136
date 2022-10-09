@@ -19,6 +19,7 @@ from util import manhattanDistance
 from game import Directions
 import random, util
 import math
+import sys
 
 from game import Agent
 
@@ -150,107 +151,47 @@ class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 2)
     """   
-    def minimax(self, gamestate, current_depth, agent_index):
-        #This is if the next agent is not a ghost but again pacmans turn - increment depth
-        if agent_index >= gamestate.getNumAgents():
-            return self.minimax(gamestate, current_depth + 1, 0)
-        
-        if current_depth > self.depth or gamestate.isWin() or gamestate.isLose():
-            return self.evaluationFunction(gamestate)
-        
-       
-        legal_actions = []
-        for action in gamestate.getLegalActions(agent_index):
-            legal_actions.append(action)
 
-        scores = []
-        for action in legal_actions:
-            succesor = gamestate.generateSuccessor(agent_index, action)
-            score = self.minimax(succesor, current_depth, agent_index + 1)
-            scores.append(score)
+    def minimax(self, agent, depth, gameState):
         
-        if agent_index == 0:
-            #Pacman move
-            best_score = max(scores)
-            if current_depth == 1:
-                #This is the very first move for pacman
-                best_indexes = []
-                for index in range(len(scores)):
-                    if scores[index] == best_score:
-                        best_indexes.append(index)
-                #Simply choose the first one if there are several moves that leads to the best score
-                return legal_actions[best_indexes[0]]
-            return best_score
+        if agent >= gameState.getNumAgents():
+            agent = 0
+            depth += 1
+        if gameState.isLose() or gameState.isWin() or depth >= self.depth:
+            return self.evaluationFunction(gameState)
+
+        
+        if agent == 0:  # maximize for pacman
+            return max(self.minimax(1, depth, gameState.generateSuccessor(agent, action)) for action in gameState.getLegalActions(agent))
         else:
-            return min(scores)
+            #Ghosts turn
+            next_agent = agent + 1
+            return min(self.minimax(next_agent, depth, gameState.generateSuccessor(agent, action)) for action in gameState.getLegalActions(agent))
 
 
     def getAction(self, gameState):
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction. """
-        return self.minimax(gameState, 1, 0)
+
+        #return self.minimax(gameState, 1, 0)
+        legal_actions = gameState.getLegalActions(0)
+        action_scores = [self.minimax(0, 0, gameState.generateSuccessor(0, action)) for action
+                         in legal_actions]
+
+        max_action = max(action_scores)
+        max_indices = [index for index in range(len(action_scores)) if action_scores[index] == max_action]
+        chosenIndex = random.choice(max_indices)
+        return legal_actions[chosenIndex]
         
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
     """
-    def minimax_ab(self, gamestate, current_depth, agent_index, alpha, beta):
-        if agent_index >= gamestate.getNumAgents():
-            return self.minimax_ab(gamestate, current_depth + 1, 0, alpha, beta)
-        
-        if current_depth > self.depth or gamestate.isWin() or gamestate.isLose():
-            return self.evaluationFunction(gamestate)
-        
-        legal_actions = []
-        for action in gamestate.getLegalActions(agent_index):
-            legal_actions.append(action)
-        
-        if agent_index == 0:
-            if current_depth == 1:
-                #Pacman first move
-                scores = []
-                for action in legal_actions:
-                    succesor = gamestate.generateSuccessor(agent_index, action)
-                    score = self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta)
-                    scores.append(score)
-
-                best_score = max(scores)
-                best_indexes = []
-                for index in range(len(scores)):
-                    if scores[index] == best_score:
-                        best_indexes.append(index)
-                #Simply take the first best move if several
-                best_move = legal_actions[best_indexes[0]]
-                return best_move
-
-            best_score = -math.inf
-            for action in legal_actions:
-                succesor = gamestate.generateSuccessor(agent_index, action)
-                best_score = max(best_score, self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta))
-                if best_score >= beta:
-                    return best_score
-                alpha = max(alpha, best_score)
-            return best_score
-        else:
-            best_score = math.inf
-            for action in legal_actions:
-                succesor = gamestate.generateSuccessor(agent_index, action)
-                best_score = min(best_score, self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta))
-                if best_score <= alpha:
-                    return best_score
-                beta = min(best_score, beta)
-            return best_score
 
     def getAction(self, gameState):
-        """
-        Returns the minimax action using self.depth and self.evaluationFunction
-        """
-        "*** YOUR CODE HERE ***"
-        alpha = -math.inf
-        beta = math.inf
-        return self.minimax_ab(gameState, 1, 0, alpha, beta)
+        return util.raiseNotDefined()
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
