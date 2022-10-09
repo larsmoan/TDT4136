@@ -12,6 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+from argparse import Action
 from pickle import FALSE
 from unittest import BaseTestSuite
 from util import manhattanDistance
@@ -149,163 +150,107 @@ class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 2)
     """   
-
-    #Trying to write minimax as one function even though there are several ghosts
-    def minimax(self, gameState, depth, agent):
-        #Variables
-        best_score = 0
-        best_action = Directions.STOP
-
-        if gameState.isWin() or gameState.isLose():
-            return self.evaluationFunction(gameState)
+    def minimax(self, gamestate, current_depth, agent_index):
+        #This is if the next agent is not a ghost but again pacmans turn - increment depth
+        if agent_index >= gamestate.getNumAgents():
+            return self.minimax(gamestate, current_depth + 1, 0)
         
-        #Case 1 - Pacman
-        if agent == 0:
-            score = -math.inf
-            next_agent = agent + 1
-            for action in gameState.getLegalActions(agent):
-                succesor = gameState.generateSuccessor(agent, action)
-                score = self.minimax(succesor, depth - 1, next_agent)
-                if type(score) == "float":
-                    if score > best_score:
-                        best_score = score
-                        best_action = action
-            if depth == 0:
-                return best_action
-            else:
-                return best_score
-        else:
-            #Some way of managing multiple ghosts
-            best_score = math.inf
-            
-            #Some sort of check as to wether the next agent is another ghost or a 
-            next_agent = agent + 1
-            num_ghosts = gameState.getNumAgents()
-            if next_agent >= num_ghosts - 1:
-                #It is the last ghost and we need to decrement depth
-                next_agent = 0
-                for action in gameState.getLegalActions(agent):
-                    succesor = gameState.generateSuccessor(agent, action)
-                    score = self.minimax(succesor, depth - 1, next_agent)
-                    if type(score) == "float":
-                        if score < best_score:
-                            best_score = score
+        if current_depth > self.depth or gamestate.isWin() or gamestate.isLose():
+            return self.evaluationFunction(gamestate)
+        
+       
+        legal_actions = []
+        for action in gamestate.getLegalActions(agent_index):
+            legal_actions.append(action)
 
-                return best_score
-
-            #Case 1 we assume the next agent is also a ghost
-            next_agent = agent + 1
-            for action in gameState.getLegalActions(agent):
-                succesor = gameState.generateSuccessor(agent, action)
-                best_score = min(score, self.minimax(succesor, depth, next_agent))
+        scores = []
+        for action in legal_actions:
+            succesor = gamestate.generateSuccessor(agent_index, action)
+            score = self.minimax(succesor, current_depth, agent_index + 1)
+            scores.append(score)
+        
+        if agent_index == 0:
+            #Pacman move
+            best_score = max(scores)
+            if current_depth == 1:
+                #This is the very first move for pacman
+                best_indexes = []
+                for index in range(len(scores)):
+                    if scores[index] == best_score:
+                        best_indexes.append(index)
+                #Simply choose the first one if there are several moves that leads to the best score
+                return legal_actions[best_indexes[0]]
             return best_score
-
-    def MinimaxSearch(self, gameState, currentDepth, agentIndex):
-        if agentIndex >= gameState.getNumAgents():
-            return self.MinimaxSearch(gameState, currentDepth+1, 0)
-        if currentDepth > self.depth or gameState.isWin() or gameState.isLose():
-            return self.evaluationFunction(gameState)
-
-        legalMoves = [action for action in gameState.getLegalActions(
-            agentIndex) if action != 'Stop']
-
-        scores = [self.MinimaxSearch(gameState.generateSuccessor(
-            agentIndex, action), currentDepth, agentIndex + 1) for action in legalMoves]
-
-        if agentIndex == 0:
-            bestScore = max(scores)
-            if currentDepth == 1:  # pacman first move
-                bestIndices = [index for index in range(
-                    len(scores)) if scores[index] == bestScore]
-                chosenIndex = random.choice(bestIndices)
-                return legalMoves[chosenIndex]
-            return bestScore
         else:
             return min(scores)
-        
+
+
     def getAction(self, gameState):
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction. """
-
-        
-        #return maxagent(gameState, 0)
-        #return self.minimax(gameState, self.depth, 0)
-        return self.MinimaxSearch(gameState, 1, 0)
+        return self.minimax(gameState, 1, 0)
         
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
     """
+    def minimax_ab(self, gamestate, current_depth, agent_index, alpha, beta):
+        if agent_index >= gamestate.getNumAgents():
+            return self.minimax_ab(gamestate, current_depth + 1, 0, alpha, beta)
+        
+        if current_depth > self.depth or gamestate.isWin() or gamestate.isLose():
+            return self.evaluationFunction(gamestate)
+        
+        legal_actions = []
+        for action in gamestate.getLegalActions(agent_index):
+            legal_actions.append(action)
+        
+        if agent_index == 0:
+            if current_depth == 1:
+                #Pacman first move
+                scores = []
+                for action in legal_actions:
+                    succesor = gamestate.generateSuccessor(agent_index, action)
+                    score = self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta)
+                    scores.append(score)
+
+                best_score = max(scores)
+                best_indexes = []
+                for index in range(len(scores)):
+                    if scores[index] == best_score:
+                        best_indexes.append(index)
+                #Simply take the first best move if several
+                best_move = legal_actions[best_indexes[0]]
+                return best_move
+
+            best_score = -math.inf
+            for action in legal_actions:
+                succesor = gamestate.generateSuccessor(agent_index, action)
+                best_score = max(best_score, self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta))
+                if best_score >= beta:
+                    return best_score
+                alpha = max(alpha, best_score)
+            return best_score
+        else:
+            best_score = math.inf
+            for action in legal_actions:
+                succesor = gamestate.generateSuccessor(agent_index, action)
+                best_score = min(best_score, self.minimax_ab(succesor, current_depth, agent_index + 1, alpha, beta))
+                if best_score <= alpha:
+                    return best_score
+                beta = min(best_score, beta)
+            return best_score
 
     def getAction(self, gameState):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-
-        #Divide into maxagent_ab and minagent_ab
-        def maxagent_ab(gameState, depth, alpha, beta):
-            if gameState.isWin() or gameState.isLose():
-                return self.evaluationFunction(gameState)
-            
-            score = -math.inf
-            bestAction = Directions.STOP
-            for action in gameState.getLegalActions(0):
-                succesor = gameState.generateSuccessor(0, action)
-                tmp_score = minagent_ab(succesor, depth, 1, alpha, beta)
-                if tmp_score > score:
-                    score = tmp_score
-                    bestAction = action
-                alpha = max(score, alpha)
-                if score > beta:
-                    break #Beta cutoff
-                #Here i include the pruning by comparing the score to the alpha value?
-
-            if depth == 0:
-                return bestAction
-            else:
-                return score
-    
-        
-        def minagent_ab(gameState, depth, agent, alpha, beta):
-            if gameState.isWin() or gameState.isLose():
-                return self.evaluationFunction(gameState)
-            
-            next_agent = agent + 1
-            num_ghosts = gameState.getNumAgents() - 1
-            if agent == num_ghosts:
-                #The next agent should be the pacman
-                next_agent = 0
-            score = math.inf
-
-            for action in gameState.getLegalActions(agent):
-                if next_agent == 0:
-                    if depth == self.depth - 1: #This means that ??
-                        succesor = gameState.generateSuccessor(agent, action)
-                        tmp_score = self.evaluationFunction(succesor)
-                    else:
-                        succesor = gameState.generateSuccessor(agent, action)
-                        tmp_score = maxagent_ab(succesor, depth + 1, alpha, depth)
-
-                else: #There is another ghost we need to account for
-                    succesor = gameState.generateSuccessor(agent, action)
-                    tmp_score = minagent_ab(succesor, depth, next_agent, alpha, beta)
-
-            
-                if tmp_score < score:
-                    score = tmp_score
-
-                beta = min(score, beta)
-                if score < alpha:
-                    break #Alpha cutoff
-
-            return score
-
         alpha = -math.inf
-        beta = -math.inf
-        return maxagent_ab(gameState, 0, alpha, beta)
+        beta = math.inf
+        return self.minimax_ab(gameState, 1, 0, alpha, beta)
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
