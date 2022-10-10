@@ -188,7 +188,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         legal_actions = gameState.getLegalActions(0)
         action_scores = [self.minValue(1, 0, gameState.generateSuccessor(0, action)) for action
                          in legal_actions]
-        print(action_scores)
+        #print(action_scores)
         max_action = max(action_scores)
         max_indices = [index for index in range(len(action_scores)) if action_scores[index] == max_action]
         chosen_index = max_indices[-1]
