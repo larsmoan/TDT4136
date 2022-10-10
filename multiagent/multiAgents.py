@@ -13,7 +13,9 @@
 
 
 from argparse import Action
+from lib2to3.refactor import get_all_fix_names
 from pickle import FALSE
+import re
 from sre_constants import SUCCESS
 from unittest import BaseTestSuite
 from util import manhattanDistance
@@ -189,17 +191,75 @@ class MinimaxAgent(MultiAgentSearchAgent):
         print(action_scores)
         max_action = max(action_scores)
         max_indices = [index for index in range(len(action_scores)) if action_scores[index] == max_action]
-        chosenIndex = max_indices[-1]
-        return legal_actions[chosenIndex]
+        chosen_index = max_indices[-1]
+        return legal_actions[chosen_index]
         
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
     """
+    def maxValue_ab(self, agent_index, depth, game_state, alpha, beta):
+        current_depth = depth + 1
+        if game_state.isWin() or game_state.isLose() or current_depth == self.depth:
+            return self.evaluationFunction(game_state)
+        max_value = -math.inf
+        legal_actions = game_state.getLegalActions(agent_index)
+        alpha_1 = alpha
+        for action in legal_actions:
+            succesor = game_state.generateSuccessor(agent_index, action)
+            max_value = max(max_value, self.minValue_ab(agent_index + 1, current_depth, succesor, alpha_1, beta))
+           
+            if max_value > beta:
+                #Beta cutoff
+                break
+            alpha_1 = max(alpha_1, max_value)
+        return max_value
 
+    
+    def minValue_ab(self, agent_index, depth, game_state, alpha, beta):
+        min_value = math.inf
+        beta_1 = beta
+        if game_state.isWin() or game_state.isLose():
+            return self.evaluationFunction(game_state)
+        legal_actions = game_state.getLegalActions(agent_index)
+        for action in legal_actions:
+            successor = game_state.generateSuccessor(agent_index, action)
+            if agent_index == (game_state.getNumAgents() - 1):
+                min_value = min(min_value, self.maxValue_ab(0, depth, successor, alpha, beta_1))
+
+                if min_value < alpha:
+                    break #Alpha cutoff
+                beta_1 = min(beta_1, min_value)
+
+            else:
+                min_value = min(min_value, self.minValue_ab(agent_index+1, depth, successor, alpha, beta_1))
+                beta_1 = min(beta_1, min_value)
+                if min_value < alpha:
+                    break #Alpha cutoff
+            
+        return min_value
     def getAction(self, gameState):
-        return util.raiseNotDefined()
+        #Initialize alpha and beta
+        alpha = -math.inf
+        beta = math.inf
+        legal_actions = gameState.getLegalActions(0)
+        
+        action_scores = []
+        best_score = -math.inf
+        best_action = Directions.STOP
+
+        for action in legal_actions:
+            successor = gameState.generateSuccessor(0, action)
+            score = self.minValue_ab(1,0,successor, alpha, beta)
+            action_scores.append(score)
+            if score > best_score:
+                best_action = action
+                best_score = score
+            if score > beta:
+                return best_action
+            alpha = max(alpha, score)
+        return best_action
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
