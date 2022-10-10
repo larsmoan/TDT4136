@@ -242,7 +242,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     def getAction(self, gameState):
         #Initialize alpha and beta
         alpha = -math.inf
-        beta = math.inf
+        beta = math.inf 
         legal_actions = gameState.getLegalActions(0)
         
         action_scores = []
@@ -265,6 +265,36 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
     """
+    def maximizer(self, agent_index, depth, gamestate):
+        current_depth = depth + 1
+        if gamestate.isWin() or gamestate.isLose() or current_depth == self.depth:
+            return self.evaluationFunction(gamestate)
+        max_value = -math.inf
+        legal_actions = gamestate.getLegalActions(agent_index)
+        for action in legal_actions:
+            successor = gamestate.generateSuccessor(agent_index, action)
+            max_value = max(max_value, self.expectimizer(1, current_depth, successor))
+        return max_value
+    
+
+    def expectimizer(self, agent_index, depth, gamestate):
+        if gamestate.isWin() or gamestate.isLose():
+            return self.evaluationFunction(gamestate)
+        legal_actions = gamestate.getLegalActions(agent_index)
+        tot_expected_value = 0
+        for action in legal_actions:
+            successor = gamestate.generateSuccessor(agent_index, action)
+            if (gamestate.getNumAgents() - 1) == agent_index:
+                #The last ghost
+                expected_value = self.maximizer(0, depth, successor)
+            else:
+                expected_value = self.expectimizer(agent_index+1, depth, successor)
+            tot_expected_value += expected_value
+        if len(legal_actions) == 0:
+            #The ghosts had no legal actions? How can this happen - this fixed a bug i had
+            return 0
+        return float(tot_expected_value) / float(len(legal_actions))
+
 
     def getAction(self, gameState):
         """
@@ -274,7 +304,17 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legal_actions = gameState.getLegalActions(0)
+        best_score = -math.inf
+        best_action = Directions.STOP
+        for action in legal_actions:
+            successor = gameState.generateSuccessor(0, action)
+            score = self.expectimizer(1,0,successor)
+            if score > best_score:
+                best_score = score
+                best_action = action
+                
+        return best_action      
 
 def betterEvaluationFunction(currentGameState):
     """
