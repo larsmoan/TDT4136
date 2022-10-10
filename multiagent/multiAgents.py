@@ -14,6 +14,7 @@
 
 from argparse import Action
 from pickle import FALSE
+from sre_constants import SUCCESS
 from unittest import BaseTestSuite
 from util import manhattanDistance
 from game import Directions
@@ -151,22 +152,29 @@ class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 2)
     """   
-
-    def minimax(self, agent, depth, gameState):
-        
-        if agent >= gameState.getNumAgents():
-            agent = 0
-            depth += 1
-        if gameState.isLose() or gameState.isWin() or depth >= self.depth:
+    def maxValue(self, agent_index, depth, gameState):
+        current_depth = depth + 1
+        if gameState.isWin() or gameState.isLose() or current_depth == self.depth:
             return self.evaluationFunction(gameState)
+        max_value = -math.inf
+        legal_actions = gameState.getLegalActions(agent_index)
+        for action in legal_actions:
+            succesor = gameState.generateSuccessor(agent_index, action)
+            max_value = max(max_value, self.minValue(agent_index+1, current_depth, succesor))
+        return max_value
 
-        
-        if agent == 0:  # maximize for pacman
-            return max(self.minimax(1, depth, gameState.generateSuccessor(agent, action)) for action in gameState.getLegalActions(agent))
-        else:
-            #Ghosts turn
-            next_agent = agent + 1
-            return min(self.minimax(next_agent, depth, gameState.generateSuccessor(agent, action)) for action in gameState.getLegalActions(agent))
+    def minValue(self, agent_index, depth, gameState):
+        min_value = math.inf
+        if gameState.isWin() or gameState.isLose():
+            return self.evaluationFunction(gameState)
+        legal_actions = gameState.getLegalActions(agent_index)
+        for action in legal_actions:
+            successor = gameState.generateSuccessor(agent_index, action)
+            if agent_index == (gameState.getNumAgents() - 1):
+                min_value = min(min_value, self.maxValue(0, depth, successor))
+            else:
+                min_value = min(min_value, self.minValue(agent_index+1, depth, successor))
+        return min_value
 
 
     def getAction(self, gameState):
@@ -176,12 +184,12 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
         #return self.minimax(gameState, 1, 0)
         legal_actions = gameState.getLegalActions(0)
-        action_scores = [self.minimax(0, 0, gameState.generateSuccessor(0, action)) for action
+        action_scores = [self.minValue(1, 0, gameState.generateSuccessor(0, action)) for action
                          in legal_actions]
-
+        print(action_scores)
         max_action = max(action_scores)
         max_indices = [index for index in range(len(action_scores)) if action_scores[index] == max_action]
-        chosenIndex = random.choice(max_indices)
+        chosenIndex = max_indices[-1]
         return legal_actions[chosenIndex]
         
 
